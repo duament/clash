@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -61,7 +62,7 @@ func (c *conn) AppendToChains(a C.ProxyAdapter) {
 	c.chain = append(c.chain, a.Name())
 }
 
-func newConn(c net.Conn, a C.ProxyAdapter) C.Conn {
+func NewConn(c net.Conn, a C.ProxyAdapter) C.Conn {
 	return &conn{c, []string{a.Name()}}
 }
 
@@ -103,12 +104,36 @@ func (p *Proxy) Dial(metadata *C.Metadata) (C.Conn, error) {
 	return p.DialContext(ctx, metadata)
 }
 
+func (p *Proxy) InitConn(ctx context.Context) (net.Conn, error) {
+	proxyAdapterExtended, ok := p.ProxyAdapter.(C.ProxyAdapterExtended)
+	if !ok {
+		return nil, fmt.Errorf("%s does not support relay", p.ProxyAdapter.Name())
+	}
+	return proxyAdapterExtended.InitConn(ctx)
+}
+
+func (p *Proxy) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
+	proxyAdapterExtended, ok := p.ProxyAdapter.(C.ProxyAdapterExtended)
+	if !ok {
+		return nil, fmt.Errorf("%s does not support relay", p.ProxyAdapter.Name())
+	}
+	return proxyAdapterExtended.StreamConn(c, metadata)
+}
+
 func (p *Proxy) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	conn, err := p.ProxyAdapter.DialContext(ctx, metadata)
 	if err != nil {
 		p.alive = false
 	}
 	return conn, err
+}
+
+func (p *Proxy) ToMetadata() (addr C.Metadata, err error) {
+	proxyAdapterExtended, ok := p.ProxyAdapter.(C.ProxyAdapterExtended)
+	if !ok {
+		return C.Metadata{}, fmt.Errorf("%s does not support relay", p.ProxyAdapter.Name())
+	}
+	return proxyAdapterExtended.ToMetadata()
 }
 
 func (p *Proxy) DelayHistory() []C.DelayHistory {

@@ -28,12 +28,16 @@ type SnellOption struct {
 	ObfsOpts map[string]interface{} `proxy:"obfs-opts,omitempty"`
 }
 
-func (s *Snell) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+func (s *Snell) InitConn(ctx context.Context) (net.Conn, error) {
 	c, err := dialer.DialContext(ctx, "tcp", s.server)
 	if err != nil {
 		return nil, fmt.Errorf("%s connect error: %w", s.server, err)
 	}
 	tcpKeepAlive(c)
+	return c, nil
+}
+
+func (s *Snell) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 	switch s.obfsOption.Mode {
 	case "tls":
 		c = obfs.NewTLSObfs(c, s.obfsOption.Host)
@@ -43,8 +47,22 @@ func (s *Snell) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, 
 	}
 	c = snell.StreamConn(c, s.psk)
 	port, _ := strconv.Atoi(metadata.DstPort)
-	err = snell.WriteHeader(c, metadata.String(), uint(port))
-	return newConn(c, s), err
+	err := snell.WriteHeader(c, metadata.String(), uint(port))
+	return c, err
+}
+
+func (s *Snell) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	c, err := dialer.DialContext(ctx, "tcp", s.server)
+	if err != nil {
+		return nil, fmt.Errorf("%s connect error: %w", s.server, err)
+	}
+	tcpKeepAlive(c)
+	c, err = s.StreamConn(c, metadata)
+	return NewConn(c, s), err
+}
+
+func (s *Snell) ToMetadata() (C.Metadata, error) {
+	return addressToMetadata(s.server)
 }
 
 func NewSnell(option SnellOption) (*Snell, error) {

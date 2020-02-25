@@ -19,6 +19,7 @@ const (
 	Vmess
 	Trojan
 
+	Relay
 	Selector
 	Fallback
 	URLTest
@@ -68,6 +69,13 @@ type ProxyAdapter interface {
 	MarshalJSON() ([]byte, error)
 }
 
+type ProxyAdapterExtended interface {
+	ProxyAdapter
+	ToMetadata() (Metadata, error)
+	InitConn(ctx context.Context) (net.Conn, error)
+	StreamConn(c net.Conn, metadata *Metadata) (net.Conn, error)
+}
+
 type DelayHistory struct {
 	Time  time.Time `json:"time"`
 	Delay uint16    `json:"delay"`
@@ -105,6 +113,8 @@ func (at AdapterType) String() string {
 	case Trojan:
 		return "Trojan"
 
+	case Relay:
+		return "Relay"
 	case Selector:
 		return "Selector"
 	case Fallback:

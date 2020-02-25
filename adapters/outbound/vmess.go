@@ -35,14 +35,27 @@ type VmessOption struct {
 	SkipCertVerify bool              `proxy:"skip-cert-verify,omitempty"`
 }
 
-func (v *Vmess) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+func (v *Vmess) InitConn(ctx context.Context) (net.Conn, error) {
 	c, err := dialer.DialContext(ctx, "tcp", v.server)
 	if err != nil {
 		return nil, fmt.Errorf("%s connect error", v.server)
 	}
 	tcpKeepAlive(c)
-	c, err = v.client.New(c, parseVmessAddr(metadata))
-	return newConn(c, v), err
+	return c, nil
+}
+
+func (v *Vmess) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
+	return v.client.New(c, parseVmessAddr(metadata))
+}
+
+func (v *Vmess) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	c, err := v.InitConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err = v.StreamConn(c, metadata)
+	return NewConn(c, v), err
 }
 
 func (v *Vmess) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
@@ -67,6 +80,10 @@ func (v *Vmess) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 		return nil, fmt.Errorf("new vmess client error: %v", err)
 	}
 	return newPacketConn(&vmessPacketConn{Conn: c, rAddr: metadata.UDPAddr()}, v), nil
+}
+
+func (v *Vmess) ToMetadata() (C.Metadata, error) {
+	return addressToMetadata(v.server)
 }
 
 func NewVmess(option VmessOption) (*Vmess, error) {

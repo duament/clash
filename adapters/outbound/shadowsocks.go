@@ -60,12 +60,16 @@ type v2rayObfsOption struct {
 	Mux            bool              `obfs:"mux,omitempty"`
 }
 
-func (ss *ShadowSocks) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+func (ss *ShadowSocks) InitConn(ctx context.Context) (net.Conn, error) {
 	c, err := dialer.DialContext(ctx, "tcp", ss.server)
 	if err != nil {
 		return nil, fmt.Errorf("%s connect error: %w", ss.server, err)
 	}
 	tcpKeepAlive(c)
+	return c, nil
+}
+
+func (ss *ShadowSocks) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 	switch ss.obfsMode {
 	case "tls":
 		c = obfs.NewTLSObfs(c, ss.obfsOption.Host)
@@ -80,8 +84,18 @@ func (ss *ShadowSocks) DialContext(ctx context.Context, metadata *C.Metadata) (C
 		}
 	}
 	c = ss.cipher.StreamConn(c)
-	_, err = c.Write(serializesSocksAddr(metadata))
-	return newConn(c, ss), err
+	_, err := c.Write(serializesSocksAddr(metadata))
+	return c, err
+}
+
+func (ss *ShadowSocks) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
+	c, err := ss.InitConn(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	c, err = ss.StreamConn(c, metadata)
+	return NewConn(c, ss), err
 }
 
 func (ss *ShadowSocks) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
@@ -103,6 +117,10 @@ func (ss *ShadowSocks) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]string{
 		"type": ss.Type().String(),
 	})
+}
+
+func (ss *ShadowSocks) ToMetadata() (C.Metadata, error) {
+	return addressToMetadata(ss.server)
 }
 
 func NewShadowSocks(option ShadowSocksOption) (*ShadowSocks, error) {
