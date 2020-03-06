@@ -18,6 +18,7 @@ var (
 	socksUDPListener *socks.SockUDPListener
 	httpListener     *http.HttpListener
 	redirListener    *redir.RedirListener
+	redirUDPListener *redir.RedirUDPListener
 )
 
 type listener interface {
@@ -131,12 +132,25 @@ func ReCreateRedir(port int) error {
 		redirListener = nil
 	}
 
+	if redirUDPListener != nil {
+		if redirUDPListener.Address() == addr {
+			return nil
+		}
+		redirUDPListener.Close()
+		redirUDPListener = nil
+	}
+
 	if portIsZero(addr) {
 		return nil
 	}
 
 	var err error
 	redirListener, err = redir.NewRedirProxy(addr)
+	if err != nil {
+		return err
+	}
+
+	redirUDPListener, err = redir.NewRedirUDPProxy(addr)
 	if err != nil {
 		return err
 	}
