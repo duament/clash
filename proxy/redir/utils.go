@@ -8,8 +8,9 @@ import (
 
 type fakeConn struct {
 	net.PacketConn
+	origDst net.Addr
 	rAddr   net.Addr
-	buf  []byte
+	buf     []byte
 }
 
 func (c *fakeConn) Data() []byte {
@@ -18,7 +19,7 @@ func (c *fakeConn) Data() []byte {
 
 // WriteBack wirtes UDP packet with source(ip, port) = `addr`
 func (c *fakeConn) WriteBack(b []byte, addr net.Addr) (n int, err error) {
-	tc, err := dialUDP("udp", addr.(*net.UDPAddr), c.rAddr.(*net.UDPAddr))
+	tc, err := dialUDP("udp", c.origDst.(*net.UDPAddr), c.rAddr.(*net.UDPAddr))
 	if err != nil {
 		n = 0
 		return

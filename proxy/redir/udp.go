@@ -8,7 +8,6 @@ import (
 	"github.com/Dreamacro/clash/common/pool"
 	"github.com/Dreamacro/clash/component/socks5"
 	C "github.com/Dreamacro/clash/constant"
-	"github.com/Dreamacro/clash/log"
 	"github.com/Dreamacro/clash/tunnel"
 )
 
@@ -53,7 +52,6 @@ func NewRedirUDPProxy(addr string) (*RedirUDPListener, error) {
 
 			origDst, err = getOrigDst(oob, oobn)
 			if err != nil {
-				log.Debugln("redir udp: getorigDst error: %s", err)
 				continue
 			}
 			handleRedirUDP(l, buf[:n], remoteAddr, origDst)
@@ -79,6 +77,7 @@ func handleRedirUDP(pc net.PacketConn, buf []byte, addr *net.UDPAddr, origDst *n
 
 	packet := &fakeConn{
 		PacketConn: pc,
+		origDst:    origDstAddr,
 		rAddr:      addrAddr,
 		buf:        buf,
 	}
