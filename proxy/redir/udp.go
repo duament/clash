@@ -38,7 +38,6 @@ func NewRedirUDPProxy(addr string) (*RedirUDPListener, error) {
 	go func() {
 		oob := make([]byte, 1024)
 		for {
-			var origDst *net.UDPAddr
 			buf := pool.BufPool.Get().([]byte)
 
 			n, oobn, _, remoteAddr, err := c.ReadMsgUDP(buf, oob)
@@ -50,7 +49,7 @@ func NewRedirUDPProxy(addr string) (*RedirUDPListener, error) {
 				continue
 			}
 
-			origDst, err = getOrigDst(oob, oobn)
+			origDst, err := getOrigDst(oob, oobn)
 			if err != nil {
 				continue
 			}

@@ -8,6 +8,8 @@ import (
 	"syscall"
 )
 
+// dialUDP acts like net.DialUDP for transparent proxy.
+// It binds to a non-local address(`lAddr`).
 func dialUDP(network string, lAddr *net.UDPAddr, rAddr *net.UDPAddr) (*net.UDPConn, error) {
 	rSockAddr, err := udpAddrToSockAddr(rAddr)
 	if err != nil {
