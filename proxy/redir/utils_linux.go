@@ -70,7 +70,7 @@ func udpAddrToSockAddr(addr *net.UDPAddr) (syscall.Sockaddr, error) {
 
 		zoneID, err := strconv.ParseUint(addr.Zone, 10, 32)
 		if err != nil {
-			return nil, err
+			zoneID = 0
 		}
 
 		return &syscall.SockaddrInet6{Addr: ip, Port: addr.Port, ZoneId: uint32(zoneID)}, nil
