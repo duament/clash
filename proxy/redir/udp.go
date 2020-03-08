@@ -1,7 +1,6 @@
 package redir
 
 import (
-	"errors"
 	"net"
 
 	adapters "github.com/Dreamacro/clash/adapters/inbound"
@@ -25,10 +24,7 @@ func NewRedirUDPProxy(addr string) (*RedirUDPListener, error) {
 
 	rl := &RedirUDPListener{l, addr, false}
 
-	c, ok := l.(*net.UDPConn)
-	if !ok {
-		return nil, errors.New("only work with UDP connection")
-	}
+	c := l.(*net.UDPConn)
 
 	err = setsockopt(c, addr)
 	if err != nil {
@@ -70,14 +66,12 @@ func (l *RedirUDPListener) Address() string {
 }
 
 func handleRedirUDP(pc net.PacketConn, buf []byte, addr *net.UDPAddr, origDst *net.UDPAddr) {
-	var origDstAddr net.Addr = origDst
-	var addrAddr net.Addr = addr
-	target := socks5.ParseAddrToSocksAddr(origDstAddr)
+	target := socks5.ParseAddrToSocksAddr(origDst)
 
 	packet := &fakeConn{
 		PacketConn: pc,
-		origDst:    origDstAddr,
-		rAddr:      addrAddr,
+		origDst:    origDst,
+		rAddr:      addr,
 		buf:        buf,
 	}
 	tunnel.AddPacket(adapters.NewPacket(target, packet, C.REDIR))
