@@ -81,7 +81,7 @@ func udpAddrToSockAddr(addr *net.UDPAddr) (syscall.Sockaddr, error) {
 	}
 }
 
-func udpAddrFamily(net string, lAddr, rAddr*net.UDPAddr) int {
+func udpAddrFamily(net string, lAddr, rAddr *net.UDPAddr) int {
 	switch net[len(net)-1] {
 	case '4':
 		return syscall.AF_INET

@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	IPV6_TRANSPARENT = 0x4b
+	IPV6_TRANSPARENT     = 0x4b
 	IPV6_RECVORIGDSTADDR = 0x4a
 )
 
-func setsockopt(c *net.UDPConn, addr string) (error) {
+func setsockopt(c *net.UDPConn, addr string) error {
 	isIPv6 := true
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {

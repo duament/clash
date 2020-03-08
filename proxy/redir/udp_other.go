@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-func setsockopt(c *net.UDPConn, addr string) (error) {
+func setsockopt(c *net.UDPConn, addr string) error {
 	return errors.New("UDP redir not supported on current platform")
 }
 
