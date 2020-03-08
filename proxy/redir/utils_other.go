@@ -1,3 +1,5 @@
+// +build !linux
+
 package redir
 
 import (
@@ -6,5 +8,5 @@ import (
 )
 
 func dialUDP(network string, lAddr *net.UDPAddr, rAddr *net.UDPAddr) (*net.UDPConn, error) {
-	return nil, errors.New("Darwin not support yet")
+	return nil, errors.New("UDP redir not supported on current platform")
 }

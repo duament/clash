@@ -1,3 +1,5 @@
+// +build !linux
+
 package redir
 
 import (
@@ -6,9 +8,9 @@ import (
 )
 
 func setsockopt(c *net.UDPConn, addr string) (error) {
-	return errors.New("Darwin not support yet")
+	return errors.New("UDP redir not supported on current platform")
 }
 
 func getOrigDst(oob []byte, oobn int) (*net.UDPAddr, error) {
-	return nil, errors.New("Darwin not support yet")
+	return nil, errors.New("UDP redir not supported on current platform")
 }
