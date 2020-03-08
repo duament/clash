@@ -153,7 +153,7 @@ func ReCreateRedir(port int) error {
 
 	redirUDPListener, err = redir.NewRedirUDPProxy(addr)
 	if err != nil {
-		log.Debugln("Failed to start Redir UDP Listener: %s", err)
+		log.Warnln("Failed to start Redir UDP Listener: %s", err)
 	}
 
 	return nil
