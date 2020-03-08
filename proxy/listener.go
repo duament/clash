@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/Dreamacro/clash/log"
 	"github.com/Dreamacro/clash/proxy/http"
 	"github.com/Dreamacro/clash/proxy/redir"
 	"github.com/Dreamacro/clash/proxy/socks"
@@ -152,7 +153,7 @@ func ReCreateRedir(port int) error {
 
 	redirUDPListener, err = redir.NewRedirUDPProxy(addr)
 	if err != nil {
-		return err
+		log.Debugln("Failed to start Redir UDP Listener: %s", err)
 	}
 
 	return nil
