@@ -16,7 +16,7 @@ func (c *fakeConn) Data() []byte {
 	return c.buf
 }
 
-// WriteBack opens a new socket binding `lAddr` to wirte UDP packet back
+// WriteBack opens a new socket binding `addr` to wirte UDP packet back
 func (c *fakeConn) WriteBack(b []byte, addr net.Addr) (n int, err error) {
 	tc, err := dialUDP("udp", addr.(*net.UDPAddr), c.lAddr)
 	if err != nil {
