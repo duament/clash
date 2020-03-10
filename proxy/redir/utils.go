@@ -4,16 +4,12 @@ import (
 	"net"
 
 	"github.com/Dreamacro/clash/common/pool"
-	"github.com/Dreamacro/clash/component/resolver"
-	"github.com/Dreamacro/clash/dns"
 )
 
 type fakeConn struct {
 	net.PacketConn
-	origDst  net.Addr
-	rAddr    net.Addr
-	buf      []byte
-	ipMapped *bool
+	lAddr *net.UDPAddr
+	buf   []byte
 }
 
 func (c *fakeConn) Data() []byte {
@@ -22,12 +18,7 @@ func (c *fakeConn) Data() []byte {
 
 // WriteBack opens a new socket binding `lAddr` to wirte UDP packet back
 func (c *fakeConn) WriteBack(b []byte, addr net.Addr) (n int, err error) {
-	lAddr := addr.(*net.UDPAddr)
-	if c.IpMapped() {
-		lAddr.IP = c.origDst.(*net.UDPAddr).IP
-	}
-
-	tc, err := dialUDP("udp", lAddr, c.rAddr.(*net.UDPAddr))
+	tc, err := dialUDP("udp", c.lAddr, addr.(*net.UDPAddr))
 	if err != nil {
 		n = 0
 		return
@@ -39,27 +30,11 @@ func (c *fakeConn) WriteBack(b []byte, addr net.Addr) (n int, err error) {
 
 // LocalAddr returns the source IP/Port of UDP Packet
 func (c *fakeConn) LocalAddr() net.Addr {
-	return c.rAddr
+	return c.lAddr
 }
 
 func (c *fakeConn) Close() error {
 	err := c.PacketConn.Close()
 	pool.BufPool.Put(c.buf[:cap(c.buf)])
 	return err
-}
-
-func (c *fakeConn) IpMapped() bool {
-	if c.ipMapped != nil {
-		return *c.ipMapped
-	}
-
-	var ipMapped bool
-	resolver, ok := resolver.DefaultResolver.(*dns.Resolver)
-	if ok {
-		_, ipMapped = resolver.IPToHost(c.origDst.(*net.UDPAddr).IP)
-	} else {
-		ipMapped = false
-	}
-	c.ipMapped = &ipMapped
-	return ipMapped
 }
