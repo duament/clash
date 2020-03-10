@@ -53,8 +53,13 @@ func (c *fakeConn) IpMapped() bool {
 		return *c.ipMapped
 	}
 
-	resolver := resolver.DefaultResolver.(*dns.Resolver)
-	_, ipMapped := resolver.IPToHost(c.origDst.(*net.UDPAddr).IP)
+	var ipMapped bool
+	resolver, ok := resolver.DefaultResolver.(*dns.Resolver)
+	if ok {
+		_, ipMapped = resolver.IPToHost(c.origDst.(*net.UDPAddr).IP)
+	} else {
+		ipMapped = false
+	}
 	c.ipMapped = &ipMapped
 	return ipMapped
 }
