@@ -29,19 +29,28 @@ type TrojanOption struct {
 	UDP            bool     `proxy:"udp,omitempty"`
 }
 
+func (t *Trojan) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
+	c, err := t.instance.StreamConn(c)
+	if err != nil {
+		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
+	}
+
+	err = t.instance.WriteHeader(c, trojan.CommandTCP, serializesSocksAddr(metadata))
+	return c, err
+}
+
 func (t *Trojan) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	c, err := dialer.DialContext(ctx, "tcp", t.server)
 	if err != nil {
 		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
 	}
 	tcpKeepAlive(c)
-	c, err = t.instance.StreamConn(c)
+	c, err = t.StreamConn(c, metadata)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
+		return nil, err
 	}
 
-	err = t.instance.WriteHeader(c, trojan.CommandTCP, serializesSocksAddr(metadata))
-	return newConn(c, t), err
+	return NewConn(c, t), err
 }
 
 func (t *Trojan) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
@@ -70,6 +79,10 @@ func (t *Trojan) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]string{
 		"type": t.Type().String(),
 	})
+}
+
+func (t *Trojan) Addr() string {
+	return t.server
 }
 
 func NewTrojan(option TrojanOption) (*Trojan, error) {

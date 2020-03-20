@@ -63,17 +63,12 @@ type PacketConn interface {
 type ProxyAdapter interface {
 	Name() string
 	Type() AdapterType
+	StreamConn(c net.Conn, metadata *Metadata) (net.Conn, error)
 	DialContext(ctx context.Context, metadata *Metadata) (Conn, error)
 	DialUDP(metadata *Metadata) (PacketConn, error)
 	SupportUDP() bool
 	MarshalJSON() ([]byte, error)
-}
-
-type ProxyAdapterExtended interface {
-	ProxyAdapter
-	ToMetadata() (Metadata, error)
-	InitConn(ctx context.Context) (net.Conn, error)
-	StreamConn(c net.Conn, metadata *Metadata) (net.Conn, error)
+	Addr() string
 }
 
 type DelayHistory struct {

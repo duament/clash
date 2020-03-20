@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -31,6 +30,10 @@ func (b *Base) Type() C.AdapterType {
 	return b.tp
 }
 
+func (b *Base) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
+	return c, errors.New("no support")
+}
+
 func (b *Base) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 	return nil, errors.New("no support")
 }
@@ -43,6 +46,10 @@ func (b *Base) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]string{
 		"type": b.Type().String(),
 	})
+}
+
+func (b *Base) Addr() string {
+	return ""
 }
 
 func NewBase(name string, tp C.AdapterType, udp bool) *Base {
@@ -104,20 +111,8 @@ func (p *Proxy) Dial(metadata *C.Metadata) (C.Conn, error) {
 	return p.DialContext(ctx, metadata)
 }
 
-func (p *Proxy) InitConn(ctx context.Context) (net.Conn, error) {
-	proxyAdapterExtended, ok := p.ProxyAdapter.(C.ProxyAdapterExtended)
-	if !ok {
-		return nil, fmt.Errorf("%s does not support relay", p.ProxyAdapter.Name())
-	}
-	return proxyAdapterExtended.InitConn(ctx)
-}
-
 func (p *Proxy) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
-	proxyAdapterExtended, ok := p.ProxyAdapter.(C.ProxyAdapterExtended)
-	if !ok {
-		return nil, fmt.Errorf("%s does not support relay", p.ProxyAdapter.Name())
-	}
-	return proxyAdapterExtended.StreamConn(c, metadata)
+	return p.ProxyAdapter.StreamConn(c, metadata)
 }
 
 func (p *Proxy) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
@@ -128,12 +123,8 @@ func (p *Proxy) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, 
 	return conn, err
 }
 
-func (p *Proxy) ToMetadata() (addr C.Metadata, err error) {
-	proxyAdapterExtended, ok := p.ProxyAdapter.(C.ProxyAdapterExtended)
-	if !ok {
-		return C.Metadata{}, fmt.Errorf("%s does not support relay", p.ProxyAdapter.Name())
-	}
-	return proxyAdapterExtended.ToMetadata()
+func (p *Proxy) Addr() string {
+	return p.ProxyAdapter.Addr()
 }
 
 func (p *Proxy) DelayHistory() []C.DelayHistory {

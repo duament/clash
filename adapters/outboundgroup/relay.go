@@ -3,10 +3,12 @@ package outboundgroup
 import (
 	"context"
 	"encoding/json"
+	"net"
 
 	"github.com/Dreamacro/clash/adapters/outbound"
 	"github.com/Dreamacro/clash/adapters/provider"
 	"github.com/Dreamacro/clash/common/singledo"
+	"github.com/Dreamacro/clash/component/dialer"
 	C "github.com/Dreamacro/clash/constant"
 )
 
@@ -18,33 +20,29 @@ type Relay struct {
 
 func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	proxies := r.proxies()
-	proxyAdapterExtendeds := make([]C.ProxyAdapterExtended, len(proxies))
-	for i, proxy := range proxies {
-		proxyAdapterExtendeds[i] = proxy.(C.ProxyAdapterExtended)
-	}
-
-	c, err := proxyAdapterExtendeds[0].InitConn(ctx)
+	c, err := dialer.DialContext(ctx, "tcp", proxies[0].Addr())
 	if err != nil {
 		return nil, err
 	}
 
-	proxyMeta := make([]C.Metadata, len(proxyAdapterExtendeds))
-	for i := 0; i < len(proxyAdapterExtendeds) - 1; i++ {
-		proxyMeta[i], err = proxyAdapterExtendeds[i+1].ToMetadata()
+	var current *C.Metadata
+	for i := 0; i < len(proxies)-1; i++ {
+		current, err = addrToMetadata(proxies[i+1].Addr())
 		if err != nil {
 			return nil, err
 		}
-		c, err = proxyAdapterExtendeds[i].StreamConn(c, &proxyMeta[i])
+
+		c, err = proxies[i].StreamConn(c, current)
 		if err != nil {
 			return nil, err
 		}
 	}
-	c, err = proxyAdapterExtendeds[len(proxyAdapterExtendeds)-1].StreamConn(c, metadata)
+	c, err = proxies[len(proxies)-1].StreamConn(c, metadata)
 	if err != nil {
 		return nil, err
 	}
 
-	cc := outbound.NewConn(c, proxyAdapterExtendeds[0])
+	cc := outbound.NewConn(c, proxies[0])
 	cc.AppendToChains(r)
 	return cc, nil
 }
@@ -77,5 +75,41 @@ func NewRelay(name string, providers []provider.ProxyProvider) *Relay {
 		Base:      outbound.NewBase(name, C.Relay, false),
 		single:    singledo.NewSingle(defaultGetProxiesDuration),
 		providers: providers,
+	}
+}
+
+func addrToMetadata(rawAddress string) (addr *C.Metadata, err error) {
+	host, port, err := net.SplitHostPort(rawAddress)
+	if err != nil {
+		return
+	}
+
+	ip := net.ParseIP(host)
+	if ip != nil {
+		if ip.To4() != nil {
+			addr = &C.Metadata{
+				AddrType: C.AtypIPv4,
+				Host:     "",
+				DstIP:    ip,
+				DstPort:  port,
+			}
+			return
+		} else {
+			addr = &C.Metadata{
+				AddrType: C.AtypIPv6,
+				Host:     "",
+				DstIP:    ip,
+				DstPort:  port,
+			}
+			return
+		}
+	} else {
+		addr = &C.Metadata{
+			AddrType: C.AtypDomainName,
+			Host:     host,
+			DstIP:    nil,
+			DstPort:  port,
+		}
+		return
 	}
 }

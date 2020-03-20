@@ -36,15 +36,6 @@ type Socks5Option struct {
 	SkipCertVerify bool   `proxy:"skip-cert-verify,omitempty"`
 }
 
-func (ss *Socks5) InitConn(ctx context.Context) (net.Conn, error) {
-	c, err := dialer.DialContext(ctx, "tcp", ss.addr)
-	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", ss.addr, err)
-	}
-	tcpKeepAlive(c)
-	return c, nil
-}
-
 func (ss *Socks5) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 	if ss.tls {
 		cc := tls.Client(c, ss.tlsConfig)
@@ -69,10 +60,11 @@ func (ss *Socks5) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error)
 }
 
 func (ss *Socks5) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
-	c, err := ss.InitConn(ctx)
+	c, err := dialer.DialContext(ctx, "tcp", ss.addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s connect error: %w", ss.addr, err)
 	}
+	tcpKeepAlive(c)
 
 	c, err = ss.StreamConn(c, metadata)
 	if err != nil {
@@ -134,8 +126,8 @@ func (ss *Socks5) DialUDP(metadata *C.Metadata) (_ C.PacketConn, err error) {
 	return newPacketConn(&socksPacketConn{PacketConn: pc, rAddr: bindAddr.UDPAddr(), tcpConn: c}, ss), nil
 }
 
-func (ss *Socks5) ToMetadata() (C.Metadata, error) {
-	return addressToMetadata(ss.addr)
+func (ss *Socks5) Addr() string {
+	return ss.addr
 }
 
 func NewSocks5(option Socks5Option) *Socks5 {

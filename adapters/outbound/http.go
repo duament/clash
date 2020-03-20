@@ -35,15 +35,6 @@ type HttpOption struct {
 	SkipCertVerify bool   `proxy:"skip-cert-verify,omitempty"`
 }
 
-func (h *Http) InitConn(ctx context.Context) (net.Conn, error) {
-	c, err := dialer.DialContext(ctx, "tcp", h.addr)
-	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", h.addr, err)
-	}
-	tcpKeepAlive(c)
-	return c, nil
-}
-
 func (h *Http) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 	if h.tlsConfig != nil {
 		cc := tls.Client(c, h.tlsConfig)
@@ -61,10 +52,11 @@ func (h *Http) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 }
 
 func (h *Http) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
-	c, err := h.InitConn(ctx)
+	c, err := dialer.DialContext(ctx, "tcp", h.addr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s connect error: %w", h.addr, err)
 	}
+	tcpKeepAlive(c)
 
 	c, err = h.StreamConn(c, metadata)
 	if err != nil {
@@ -74,8 +66,8 @@ func (h *Http) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, e
 	return NewConn(c, h), nil
 }
 
-func (h *Http) ToMetadata() (C.Metadata, error) {
-	return addressToMetadata(h.addr)
+func (h *Http) Addr() string {
+	return h.addr
 }
 
 func (h *Http) shakeHand(metadata *C.Metadata, rw io.ReadWriter) error {
