@@ -53,9 +53,7 @@ func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, 
 		return nil, fmt.Errorf("%s connect error: %w", last.Addr(), err)
 	}
 
-	cc := outbound.NewConn(c, proxies[0])
-	cc.AppendToChains(r)
-	return cc, nil
+	return outbound.NewConn(c, r), nil
 }
 
 func (r *Relay) MarshalJSON() ([]byte, error) {
