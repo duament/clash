@@ -21,9 +21,8 @@ import (
 
 type ShadowSocks struct {
 	*Base
-	server   string
-	metadata *C.Metadata
-	cipher   core.Cipher
+	server string
+	cipher core.Cipher
 
 	// obfs
 	obfsMode    string
