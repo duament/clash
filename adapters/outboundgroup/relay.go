@@ -3,6 +3,7 @@ package outboundgroup
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Dreamacro/clash/adapters/outbound"
@@ -20,6 +21,9 @@ type Relay struct {
 
 func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	proxies := r.proxies()
+	if len(proxies) == 0 {
+		return nil, errors.New("Proxy does not exist")
+	}
 	first := proxies[0]
 	last := proxies[len(proxies)-1]
 
@@ -30,7 +34,7 @@ func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, 
 	tcpKeepAlive(c)
 
 	var currentMeta *C.Metadata
-	for _, proxy := range proxies[1:len(proxies)] {
+	for _, proxy := range proxies[1:] {
 		currentMeta, err = addrToMetadata(proxy.Addr())
 		if err != nil {
 			return nil, err
@@ -54,10 +58,6 @@ func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, 
 	return cc, nil
 }
 
-func (r *Relay) SupportUDP() bool {
-	return false
-}
-
 func (r *Relay) MarshalJSON() ([]byte, error) {
 	var all []string
 	for _, proxy := range r.proxies() {
@@ -79,7 +79,7 @@ func (r *Relay) proxies() []C.Proxy {
 
 func NewRelay(name string, providers []provider.ProxyProvider) *Relay {
 	return &Relay{
-		Base:      outbound.NewBase(name, C.Relay, false),
+		Base:      outbound.NewBase(name, "", C.Relay, false),
 		single:    singledo.NewSingle(defaultGetProxiesDuration),
 		providers: providers,
 	}

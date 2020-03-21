@@ -16,7 +16,6 @@ import (
 
 type Vmess struct {
 	*Base
-	server string
 	client *vmess.Client
 }
 
@@ -40,9 +39,9 @@ func (v *Vmess) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 }
 
 func (v *Vmess) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
-	c, err := dialer.DialContext(ctx, "tcp", v.server)
+	c, err := dialer.DialContext(ctx, "tcp", v.addr)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error", v.server)
+		return nil, fmt.Errorf("%s connect error", v.addr)
 	}
 	tcpKeepAlive(c)
 
@@ -62,9 +61,9 @@ func (v *Vmess) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), tcpTimeout)
 	defer cancel()
-	c, err := dialer.DialContext(ctx, "tcp", v.server)
+	c, err := dialer.DialContext(ctx, "tcp", v.addr)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error", v.server)
+		return nil, fmt.Errorf("%s connect error", v.addr)
 	}
 	tcpKeepAlive(c)
 	c, err = v.client.New(c, parseVmessAddr(metadata))
@@ -72,10 +71,6 @@ func (v *Vmess) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 		return nil, fmt.Errorf("new vmess client error: %v", err)
 	}
 	return newPacketConn(&vmessPacketConn{Conn: c, rAddr: metadata.UDPAddr()}, v), nil
-}
-
-func (v *Vmess) Addr() string {
-	return v.server
 }
 
 func NewVmess(option VmessOption) (*Vmess, error) {
@@ -100,10 +95,10 @@ func NewVmess(option VmessOption) (*Vmess, error) {
 	return &Vmess{
 		Base: &Base{
 			name: option.Name,
+			addr: net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 			tp:   C.Vmess,
 			udp:  true,
 		},
-		server: net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 		client: client,
 	}, nil
 }

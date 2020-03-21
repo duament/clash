@@ -19,7 +19,6 @@ import (
 
 type Http struct {
 	*Base
-	addr      string
 	user      string
 	pass      string
 	tlsConfig *tls.Config
@@ -64,10 +63,6 @@ func (h *Http) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, e
 	}
 
 	return NewConn(c, h), nil
-}
-
-func (h *Http) Addr() string {
-	return h.addr
 }
 
 func (h *Http) shakeHand(metadata *C.Metadata, rw io.ReadWriter) error {
@@ -129,9 +124,9 @@ func NewHttp(option HttpOption) *Http {
 	return &Http{
 		Base: &Base{
 			name: option.Name,
+			addr: net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 			tp:   C.Http,
 		},
-		addr:      net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 		user:      option.UserName,
 		pass:      option.Password,
 		tlsConfig: tlsConfig,

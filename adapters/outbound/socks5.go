@@ -17,7 +17,6 @@ import (
 
 type Socks5 struct {
 	*Base
-	addr           string
 	user           string
 	pass           string
 	tls            bool
@@ -126,10 +125,6 @@ func (ss *Socks5) DialUDP(metadata *C.Metadata) (_ C.PacketConn, err error) {
 	return newPacketConn(&socksPacketConn{PacketConn: pc, rAddr: bindAddr.UDPAddr(), tcpConn: c}, ss), nil
 }
 
-func (ss *Socks5) Addr() string {
-	return ss.addr
-}
-
 func NewSocks5(option Socks5Option) *Socks5 {
 	var tlsConfig *tls.Config
 	if option.TLS {
@@ -143,10 +138,10 @@ func NewSocks5(option Socks5Option) *Socks5 {
 	return &Socks5{
 		Base: &Base{
 			name: option.Name,
+			addr: net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 			tp:   C.Socks5,
 			udp:  option.UDP,
 		},
-		addr:           net.JoinHostPort(option.Server, strconv.Itoa(option.Port)),
 		user:           option.UserName,
 		pass:           option.Password,
 		tls:            option.TLS,

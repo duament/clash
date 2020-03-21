@@ -18,6 +18,7 @@ var (
 
 type Base struct {
 	name string
+	addr string
 	tp   C.AdapterType
 	udp  bool
 }
@@ -49,11 +50,11 @@ func (b *Base) MarshalJSON() ([]byte, error) {
 }
 
 func (b *Base) Addr() string {
-	return ""
+	return b.addr
 }
 
-func NewBase(name string, tp C.AdapterType, udp bool) *Base {
-	return &Base{name, tp, udp}
+func NewBase(name string, addr string, tp C.AdapterType, udp bool) *Base {
+	return &Base{name, addr, tp, udp}
 }
 
 type conn struct {
@@ -111,20 +112,12 @@ func (p *Proxy) Dial(metadata *C.Metadata) (C.Conn, error) {
 	return p.DialContext(ctx, metadata)
 }
 
-func (p *Proxy) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
-	return p.ProxyAdapter.StreamConn(c, metadata)
-}
-
 func (p *Proxy) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	conn, err := p.ProxyAdapter.DialContext(ctx, metadata)
 	if err != nil {
 		p.alive = false
 	}
 	return conn, err
-}
-
-func (p *Proxy) Addr() string {
-	return p.ProxyAdapter.Addr()
 }
 
 func (p *Proxy) DelayHistory() []C.DelayHistory {

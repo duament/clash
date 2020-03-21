@@ -21,7 +21,6 @@ import (
 
 type ShadowSocks struct {
 	*Base
-	server string
 	cipher core.Cipher
 
 	// obfs
@@ -65,13 +64,13 @@ func (ss *ShadowSocks) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, e
 	case "tls":
 		c = obfs.NewTLSObfs(c, ss.obfsOption.Host)
 	case "http":
-		_, port, _ := net.SplitHostPort(ss.server)
+		_, port, _ := net.SplitHostPort(ss.addr)
 		c = obfs.NewHTTPObfs(c, ss.obfsOption.Host, port)
 	case "websocket":
 		var err error
 		c, err = v2rayObfs.NewV2rayObfs(c, ss.v2rayOption)
 		if err != nil {
-			return nil, fmt.Errorf("%s connect error: %w", ss.server, err)
+			return nil, fmt.Errorf("%s connect error: %w", ss.addr, err)
 		}
 	}
 	c = ss.cipher.StreamConn(c)
@@ -80,9 +79,9 @@ func (ss *ShadowSocks) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, e
 }
 
 func (ss *ShadowSocks) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
-	c, err := dialer.DialContext(ctx, "tcp", ss.server)
+	c, err := dialer.DialContext(ctx, "tcp", ss.addr)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", ss.server, err)
+		return nil, fmt.Errorf("%s connect error: %w", ss.addr, err)
 	}
 	tcpKeepAlive(c)
 
@@ -96,7 +95,7 @@ func (ss *ShadowSocks) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 		return nil, err
 	}
 
-	addr, err := resolveUDPAddr("udp", ss.server)
+	addr, err := resolveUDPAddr("udp", ss.addr)
 	if err != nil {
 		return nil, err
 	}
@@ -111,17 +110,13 @@ func (ss *ShadowSocks) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (ss *ShadowSocks) Addr() string {
-	return ss.server
-}
-
 func NewShadowSocks(option ShadowSocksOption) (*ShadowSocks, error) {
-	server := net.JoinHostPort(option.Server, strconv.Itoa(option.Port))
+	addr := net.JoinHostPort(option.Server, strconv.Itoa(option.Port))
 	cipher := option.Cipher
 	password := option.Password
 	ciph, err := core.PickCipher(cipher, nil, password)
 	if err != nil {
-		return nil, fmt.Errorf("ss %s initialize error: %w", server, err)
+		return nil, fmt.Errorf("ss %s initialize error: %w", addr, err)
 	}
 
 	var v2rayOption *v2rayObfs.Option
@@ -143,22 +138,22 @@ func NewShadowSocks(option ShadowSocksOption) (*ShadowSocks, error) {
 	if option.Plugin == "obfs" {
 		opts := simpleObfsOption{Host: "bing.com"}
 		if err := decoder.Decode(option.PluginOpts, &opts); err != nil {
-			return nil, fmt.Errorf("ss %s initialize obfs error: %w", server, err)
+			return nil, fmt.Errorf("ss %s initialize obfs error: %w", addr, err)
 		}
 
 		if opts.Mode != "tls" && opts.Mode != "http" {
-			return nil, fmt.Errorf("ss %s obfs mode error: %s", server, opts.Mode)
+			return nil, fmt.Errorf("ss %s obfs mode error: %s", addr, opts.Mode)
 		}
 		obfsMode = opts.Mode
 		obfsOption = &opts
 	} else if option.Plugin == "v2ray-plugin" {
 		opts := v2rayObfsOption{Host: "bing.com", Mux: true}
 		if err := decoder.Decode(option.PluginOpts, &opts); err != nil {
-			return nil, fmt.Errorf("ss %s initialize v2ray-plugin error: %w", server, err)
+			return nil, fmt.Errorf("ss %s initialize v2ray-plugin error: %w", addr, err)
 		}
 
 		if opts.Mode != "websocket" {
-			return nil, fmt.Errorf("ss %s obfs mode error: %s", server, opts.Mode)
+			return nil, fmt.Errorf("ss %s obfs mode error: %s", addr, opts.Mode)
 		}
 		obfsMode = opts.Mode
 
@@ -182,10 +177,10 @@ func NewShadowSocks(option ShadowSocksOption) (*ShadowSocks, error) {
 	return &ShadowSocks{
 		Base: &Base{
 			name: option.Name,
+			addr: addr,
 			tp:   C.Shadowsocks,
 			udp:  option.UDP,
 		},
-		server: server,
 		cipher: ciph,
 
 		obfsMode:    obfsMode,

@@ -14,7 +14,6 @@ import (
 
 type Trojan struct {
 	*Base
-	server   string
 	instance *trojan.Trojan
 }
 
@@ -32,7 +31,7 @@ type TrojanOption struct {
 func (t *Trojan) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) {
 	c, err := t.instance.StreamConn(c)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
+		return nil, fmt.Errorf("%s connect error: %w", t.addr, err)
 	}
 
 	err = t.instance.WriteHeader(c, trojan.CommandTCP, serializesSocksAddr(metadata))
@@ -40,9 +39,9 @@ func (t *Trojan) StreamConn(c net.Conn, metadata *C.Metadata) (net.Conn, error) 
 }
 
 func (t *Trojan) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
-	c, err := dialer.DialContext(ctx, "tcp", t.server)
+	c, err := dialer.DialContext(ctx, "tcp", t.addr)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
+		return nil, fmt.Errorf("%s connect error: %w", t.addr, err)
 	}
 	tcpKeepAlive(c)
 	c, err = t.StreamConn(c, metadata)
@@ -56,14 +55,14 @@ func (t *Trojan) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn,
 func (t *Trojan) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), tcpTimeout)
 	defer cancel()
-	c, err := dialer.DialContext(ctx, "tcp", t.server)
+	c, err := dialer.DialContext(ctx, "tcp", t.addr)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
+		return nil, fmt.Errorf("%s connect error: %w", t.addr, err)
 	}
 	tcpKeepAlive(c)
 	c, err = t.instance.StreamConn(c)
 	if err != nil {
-		return nil, fmt.Errorf("%s connect error: %w", t.server, err)
+		return nil, fmt.Errorf("%s connect error: %w", t.addr, err)
 	}
 
 	err = t.instance.WriteHeader(c, trojan.CommandUDP, serializesSocksAddr(metadata))
@@ -81,12 +80,8 @@ func (t *Trojan) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *Trojan) Addr() string {
-	return t.server
-}
-
 func NewTrojan(option TrojanOption) (*Trojan, error) {
-	server := net.JoinHostPort(option.Server, strconv.Itoa(option.Port))
+	addr := net.JoinHostPort(option.Server, strconv.Itoa(option.Port))
 
 	tOption := &trojan.Option{
 		Password:           option.Password,
@@ -103,10 +98,10 @@ func NewTrojan(option TrojanOption) (*Trojan, error) {
 	return &Trojan{
 		Base: &Base{
 			name: option.Name,
+			addr: addr,
 			tp:   C.Trojan,
 			udp:  option.UDP,
 		},
-		server:   server,
 		instance: trojan.New(tOption),
 	}, nil
 }
