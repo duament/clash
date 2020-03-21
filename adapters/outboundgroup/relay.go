@@ -3,6 +3,7 @@ package outboundgroup
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 
 	"github.com/Dreamacro/clash/adapters/outbound"
@@ -20,26 +21,32 @@ type Relay struct {
 
 func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
 	proxies := r.proxies()
-	c, err := dialer.DialContext(ctx, "tcp", proxies[0].Addr())
+	first := proxies[0]
+	last := proxies[len(proxies)-1]
+
+	c, err := dialer.DialContext(ctx, "tcp", first.Addr())
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s connect error: %w", first.Addr(), err)
 	}
 
-	var current *C.Metadata
-	for i := 0; i < len(proxies)-1; i++ {
-		current, err = addrToMetadata(proxies[i+1].Addr())
+	var currentMeta *C.Metadata
+	for _, proxy := range proxies[1:len(proxies)] {
+		currentMeta, err = addrToMetadata(proxy.Addr())
 		if err != nil {
 			return nil, err
 		}
 
-		c, err = proxies[i].StreamConn(c, current)
+		c, err = first.StreamConn(c, currentMeta)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("%s connect error: %w", first.Addr(), err)
 		}
+
+		first = proxy
 	}
-	c, err = proxies[len(proxies)-1].StreamConn(c, metadata)
+
+	c, err = last.StreamConn(c, metadata)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s connect error: %w", last.Addr(), err)
 	}
 
 	cc := outbound.NewConn(c, proxies[0])
@@ -81,6 +88,7 @@ func NewRelay(name string, providers []provider.ProxyProvider) *Relay {
 func addrToMetadata(rawAddress string) (addr *C.Metadata, err error) {
 	host, port, err := net.SplitHostPort(rawAddress)
 	if err != nil {
+		err = fmt.Errorf("addrToMetadata failed: %w", err)
 		return
 	}
 
