@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net"
 
 	"github.com/Dreamacro/clash/adapters/outbound"
 	"github.com/Dreamacro/clash/adapters/provider"
@@ -28,6 +27,7 @@ func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, 
 	if err != nil {
 		return nil, fmt.Errorf("%s connect error: %w", first.Addr(), err)
 	}
+	tcpKeepAlive(c)
 
 	var currentMeta *C.Metadata
 	for _, proxy := range proxies[1:len(proxies)] {
@@ -82,42 +82,5 @@ func NewRelay(name string, providers []provider.ProxyProvider) *Relay {
 		Base:      outbound.NewBase(name, C.Relay, false),
 		single:    singledo.NewSingle(defaultGetProxiesDuration),
 		providers: providers,
-	}
-}
-
-func addrToMetadata(rawAddress string) (addr *C.Metadata, err error) {
-	host, port, err := net.SplitHostPort(rawAddress)
-	if err != nil {
-		err = fmt.Errorf("addrToMetadata failed: %w", err)
-		return
-	}
-
-	ip := net.ParseIP(host)
-	if ip != nil {
-		if ip.To4() != nil {
-			addr = &C.Metadata{
-				AddrType: C.AtypIPv4,
-				Host:     "",
-				DstIP:    ip,
-				DstPort:  port,
-			}
-			return
-		} else {
-			addr = &C.Metadata{
-				AddrType: C.AtypIPv6,
-				Host:     "",
-				DstIP:    ip,
-				DstPort:  port,
-			}
-			return
-		}
-	} else {
-		addr = &C.Metadata{
-			AddrType: C.AtypDomainName,
-			Host:     host,
-			DstIP:    nil,
-			DstPort:  port,
-		}
-		return
 	}
 }
