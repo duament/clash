@@ -3,7 +3,9 @@ package outboundgroup
 import (
 	"context"
 	"encoding/json"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/Dreamacro/clash/adapters/outbound"
 	"github.com/Dreamacro/clash/adapters/provider"
@@ -13,6 +15,10 @@ import (
 
 	"golang.org/x/net/publicsuffix"
 )
+
+func init() {
+	rand.Seed(time.Now().Unix())
+}
 
 type LoadBalance struct {
 	*outbound.Base
@@ -97,6 +103,18 @@ func (lb *LoadBalance) DialUDP(metadata *C.Metadata) (pc C.PacketConn, err error
 
 func (lb *LoadBalance) SupportUDP() bool {
 	return true
+}
+
+func (lb *LoadBalance) Proxy() C.Proxy {
+	proxies := lb.proxies()
+	for i := 0; i < lb.maxRetry; i++ {
+		n := rand.Intn(len(proxies))
+		if proxies[n].Alive() {
+			return proxies[n]
+		}
+	}
+
+	return nil
 }
 
 func (lb *LoadBalance) proxies() []C.Proxy {

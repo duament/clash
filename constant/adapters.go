@@ -69,6 +69,7 @@ type ProxyAdapter interface {
 	SupportUDP() bool
 	MarshalJSON() ([]byte, error)
 	Addr() string
+	Proxy() Proxy
 }
 
 type DelayHistory struct {
