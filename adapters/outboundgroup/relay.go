@@ -20,7 +20,7 @@ type Relay struct {
 }
 
 func (r *Relay) DialContext(ctx context.Context, metadata *C.Metadata) (C.Conn, error) {
-	proxies := r.proxies()
+	proxies := r.proxies(metadata)
 	if len(proxies) == 0 {
 		return nil, errors.New("Proxy does not exist")
 	}
@@ -75,14 +75,14 @@ func (r *Relay) rawProxies() []C.Proxy {
 	return elm.([]C.Proxy)
 }
 
-func (r *Relay) proxies() []C.Proxy {
+func (r *Relay) proxies(metadata *C.Metadata) []C.Proxy {
 	proxies := r.rawProxies()
 
 	for n, proxy := range proxies {
-		subproxy := proxy.Proxy()
+		subproxy := proxy.Proxy(metadata)
 		for subproxy != nil {
 			proxies[n] = subproxy
-			subproxy = subproxy.Proxy()
+			subproxy = subproxy.Proxy(metadata)
 		}
 	}
 

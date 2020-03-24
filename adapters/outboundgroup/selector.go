@@ -67,7 +67,7 @@ func (s *Selector) Set(name string) error {
 	return errors.New("Proxy does not exist")
 }
 
-func (s *Selector) Proxy() C.Proxy {
+func (s *Selector) Proxy(metadata *C.Metadata) C.Proxy {
 	return s.selectedProxy()
 }
 

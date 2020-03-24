@@ -3,9 +3,7 @@ package outboundgroup
 import (
 	"context"
 	"encoding/json"
-	"math/rand"
 	"net"
-	"time"
 
 	"github.com/Dreamacro/clash/adapters/outbound"
 	"github.com/Dreamacro/clash/adapters/provider"
@@ -15,10 +13,6 @@ import (
 
 	"golang.org/x/net/publicsuffix"
 )
-
-func init() {
-	rand.Seed(time.Now().Unix())
-}
 
 type LoadBalance struct {
 	*outbound.Base
@@ -65,18 +59,9 @@ func (lb *LoadBalance) DialContext(ctx context.Context, metadata *C.Metadata) (c
 		}
 	}()
 
-	key := uint64(murmur3.Sum32([]byte(getKey(metadata))))
-	proxies := lb.proxies()
-	buckets := int32(len(proxies))
-	for i := 0; i < lb.maxRetry; i, key = i+1, key+1 {
-		idx := jumpHash(key, buckets)
-		proxy := proxies[idx]
-		if proxy.Alive() {
-			c, err = proxy.DialContext(ctx, metadata)
-			return
-		}
-	}
-	c, err = proxies[0].DialContext(ctx, metadata)
+	proxy := lb.Proxy(metadata)
+
+	c, err = proxy.DialContext(ctx, metadata)
 	return
 }
 
@@ -87,6 +72,16 @@ func (lb *LoadBalance) DialUDP(metadata *C.Metadata) (pc C.PacketConn, err error
 		}
 	}()
 
+	proxy := lb.Proxy(metadata)
+
+	return proxy.DialUDP(metadata)
+}
+
+func (lb *LoadBalance) SupportUDP() bool {
+	return true
+}
+
+func (lb *LoadBalance) Proxy(metadata *C.Metadata) C.Proxy {
 	key := uint64(murmur3.Sum32([]byte(getKey(metadata))))
 	proxies := lb.proxies()
 	buckets := int32(len(proxies))
@@ -94,27 +89,11 @@ func (lb *LoadBalance) DialUDP(metadata *C.Metadata) (pc C.PacketConn, err error
 		idx := jumpHash(key, buckets)
 		proxy := proxies[idx]
 		if proxy.Alive() {
-			return proxy.DialUDP(metadata)
+			return proxy
 		}
 	}
 
-	return proxies[0].DialUDP(metadata)
-}
-
-func (lb *LoadBalance) SupportUDP() bool {
-	return true
-}
-
-func (lb *LoadBalance) Proxy() C.Proxy {
-	proxies := lb.proxies()
-	for i := 0; i < lb.maxRetry; i++ {
-		n := rand.Intn(len(proxies))
-		if proxies[n].Alive() {
-			return proxies[n]
-		}
-	}
-
-	return nil
+	return proxies[0]
 }
 
 func (lb *LoadBalance) proxies() []C.Proxy {

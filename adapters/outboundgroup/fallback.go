@@ -56,7 +56,7 @@ func (f *Fallback) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (f *Fallback) Proxy() C.Proxy {
+func (f *Fallback) Proxy(metadata *C.Metadata) C.Proxy {
 	proxy := f.findAliveProxy()
 	return proxy
 }

@@ -38,7 +38,7 @@ func (u *URLTest) DialUDP(metadata *C.Metadata) (C.PacketConn, error) {
 	return pc, err
 }
 
-func (u *URLTest) Proxy() C.Proxy {
+func (u *URLTest) Proxy(metadata *C.Metadata) C.Proxy {
 	return u.fast()
 }
 
