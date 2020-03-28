@@ -7,6 +7,8 @@ import (
 	"errors"
 	"net"
 	"syscall"
+
+	"github.com/Dreamacro/clash/log"
 )
 
 const (
@@ -31,16 +33,20 @@ func setsockopt(c *net.UDPConn, addr string) error {
 	}
 
 	rc.Control(func(fd uintptr) {
-		err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
-		if err == nil && isIPv6 {
+		if isIPv6 {
 			err = syscall.SetsockoptInt(int(fd), syscall.SOL_IPV6, IPV6_TRANSPARENT, 1)
 		}
+		if isIPv6 && err == nil {
+			err = syscall.SetsockoptInt(int(fd), syscall.SOL_IPV6, IPV6_RECVORIGDSTADDR, 1)
+		}
 
+		if err != nil {
+			log.Warnln("Redir UDP Listener: setsockopt failed on IPv6: %s", err)
+		}
+
+		err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_TRANSPARENT, 1)
 		if err == nil {
 			err = syscall.SetsockoptInt(int(fd), syscall.SOL_IP, syscall.IP_RECVORIGDSTADDR, 1)
-		}
-		if err == nil && isIPv6 {
-			err = syscall.SetsockoptInt(int(fd), syscall.SOL_IPV6, IPV6_RECVORIGDSTADDR, 1)
 		}
 	})
 
