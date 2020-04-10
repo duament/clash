@@ -4,6 +4,8 @@ import (
 	"net"
 
 	D "github.com/miekg/dns"
+
+	"github.com/Dreamacro/clash/common/sockopt"
 )
 
 var (
@@ -54,6 +56,11 @@ func ReCreateServer(addr string, resolver *Resolver) error {
 	}
 
 	p, err := net.ListenUDP("udp", udpAddr)
+	if err != nil {
+		return err
+	}
+
+	err = sockopt.Reuseaddr(p)
 	if err != nil {
 		return err
 	}
