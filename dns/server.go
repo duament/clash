@@ -3,9 +3,9 @@ package dns
 import (
 	"net"
 
-	D "github.com/miekg/dns"
-
 	"github.com/Dreamacro/clash/common/sockopt"
+
+	D "github.com/miekg/dns"
 )
 
 var (
@@ -60,7 +60,7 @@ func ReCreateServer(addr string, resolver *Resolver) error {
 		return err
 	}
 
-	err = sockopt.Reuseaddr(p)
+	err = sockopt.UDPReuseaddr(p)
 	if err != nil {
 		return err
 	}

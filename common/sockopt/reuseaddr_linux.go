@@ -1,5 +1,3 @@
-// +build linux
-
 package sockopt
 
 import (
@@ -7,7 +5,7 @@ import (
 	"syscall"
 )
 
-func Reuseaddr(c *net.UDPConn) (err error) {
+func UDPReuseaddr(c *net.UDPConn) (err error) {
 	rc, err := c.SyscallConn()
 	if err != nil {
 		return

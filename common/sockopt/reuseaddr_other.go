@@ -6,6 +6,6 @@ import (
 	"net"
 )
 
-func Reuseaddr(c *net.UDPConn) (err error) {
+func UDPReuseaddr(c *net.UDPConn) (err error) {
 	return
 }

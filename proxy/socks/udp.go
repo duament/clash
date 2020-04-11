@@ -23,7 +23,7 @@ func NewSocksUDPProxy(addr string) (*SockUDPListener, error) {
 		return nil, err
 	}
 
-	err = sockopt.Reuseaddr(l.(*net.UDPConn))
+	err = sockopt.UDPReuseaddr(l.(*net.UDPConn))
 	if err != nil {
 		return nil, err
 	}
