@@ -59,7 +59,7 @@ func (lb *LoadBalance) DialContext(ctx context.Context, metadata *C.Metadata) (c
 		}
 	}()
 
-	proxy := lb.Proxy(metadata)
+	proxy := lb.Unwrap(metadata)
 
 	c, err = proxy.DialContext(ctx, metadata)
 	return
@@ -72,7 +72,7 @@ func (lb *LoadBalance) DialUDP(metadata *C.Metadata) (pc C.PacketConn, err error
 		}
 	}()
 
-	proxy := lb.Proxy(metadata)
+	proxy := lb.Unwrap(metadata)
 
 	return proxy.DialUDP(metadata)
 }
@@ -81,7 +81,7 @@ func (lb *LoadBalance) SupportUDP() bool {
 	return true
 }
 
-func (lb *LoadBalance) Proxy(metadata *C.Metadata) C.Proxy {
+func (lb *LoadBalance) Unwrap(metadata *C.Metadata) C.Proxy {
 	key := uint64(murmur3.Sum32([]byte(getKey(metadata))))
 	proxies := lb.proxies()
 	buckets := int32(len(proxies))

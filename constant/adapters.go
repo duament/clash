@@ -69,7 +69,8 @@ type ProxyAdapter interface {
 	SupportUDP() bool
 	MarshalJSON() ([]byte, error)
 	Addr() string
-	Proxy(metadata *Metadata) Proxy
+	// Unwrap extracts the proxy from a proxy-group. It returns nil when nothing to extract.
+	Unwrap(metadata *Metadata) Proxy
 }
 
 type DelayHistory struct {

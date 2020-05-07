@@ -79,10 +79,10 @@ func (r *Relay) proxies(metadata *C.Metadata) []C.Proxy {
 	proxies := r.rawProxies()
 
 	for n, proxy := range proxies {
-		subproxy := proxy.Proxy(metadata)
+		subproxy := proxy.Unwrap(metadata)
 		for subproxy != nil {
 			proxies[n] = subproxy
-			subproxy = subproxy.Proxy(metadata)
+			subproxy = subproxy.Unwrap(metadata)
 		}
 	}
 

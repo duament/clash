@@ -53,7 +53,7 @@ func (b *Base) Addr() string {
 	return b.addr
 }
 
-func (b *Base) Proxy(metadata *C.Metadata) C.Proxy {
+func (b *Base) Unwrap(metadata *C.Metadata) C.Proxy {
 	return nil
 }
 
